@@ -69,7 +69,7 @@ Notes & troubleshooting
 - Example inputs will be added later.
 - Fun fact: originally this thing was written in MATLAB but I switched to Python like 1/3 into the thesis because I hate MATLAB. I know it's popular in DSP. I also know it's faster for computation-heavy tasks. Python has a huge advantage of not making my sanity slowly erode away as I stare at that godawful IDE for hours on end. Mine at least has Gojo in the background.
 
-![not joking](gojo.png)
+![not joking](rambles_to_purge/gojo.png)
 
 Not even joking. If you recognize the art, shame on you (love the artist though, @_lildev__ on X). If you're my supervisor or the reviewer and reading this, please don't look them up. 
 

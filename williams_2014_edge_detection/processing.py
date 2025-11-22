@@ -11,8 +11,20 @@ from .nms_and_thresh import non_max_suppression, hysteresis_and_binary
 from .metrics import compute_pcm_binary
 from .constants import N_MC, G_PCM, HIGHS, LOW_RATIO
 
+# import saving helper but keep optional to avoid hard dependency in tests
+try:
+    from .saving import save_binary_image
+except Exception:
+    save_binary_image = None
 
-def process_image(image_path, mask_sizes, n_mc=N_MC):
+
+def process_image(image_path, mask_sizes, n_mc=N_MC, out_dir: str = None, attempt_num: int = None):
+    """Process image and optionally save per-MC, per-mask best thin binaries when out_dir and attempt_num are provided.
+
+    Returns (df, im, gt) as before.
+    """
+    save_outputs = out_dir is not None and attempt_num is not None and save_binary_image is not None
+
     print(f"  Loading image: {os.path.basename(image_path)}")
     im = load_gray(image_path)
     H, W = im.shape
@@ -46,6 +58,8 @@ def process_image(image_path, mask_sizes, n_mc=N_MC):
 
             total_pixels = (H - 2*half) * (W - 2*half)
             pixels_processed = 0
+            # EWMA state for per-pixel timing estimator
+            ewma_per_pixel = None
             print(f"        Processing {total_pixels} pixels...")
 
             for i in range(half, H - half):
@@ -77,14 +91,10 @@ def process_image(image_path, mask_sizes, n_mc=N_MC):
                         # compute average time per processed pixel and use it to estimate remaining time
                         if pixels_processed > 0 and elapsed > 0:
                             avg_per_pixel = elapsed / float(pixels_processed)
-                            # simple exponential smoothing to stabilize short-term jitter
-                            if 'ewma_per_pixel' not in locals():
-                                ewma_per_pixel = avg_per_pixel
-                            else:
-                                alpha = 0.1
-                                ewma_per_pixel = alpha * avg_per_pixel + (1 - alpha) * ewma_per_pixel
+                            # use instantaneous average per-pixel as estimator (keeps code simple and deterministic)
+                            ewma_per_pixel = avg_per_pixel
                             remaining = total_pixels - pixels_processed
-                            eta = ewma_per_pixel * remaining
+                            eta = avg_per_pixel * remaining
                         else:
                             eta = 0.0
 
@@ -121,14 +131,35 @@ def process_image(image_path, mask_sizes, n_mc=N_MC):
                     norm = ((rmap - mn) / (mx - mn) * 255.0).astype(np.uint8)
                 nms = non_max_suppression(norm, angle_map)
                 pcm_scores = []
+                bw_thin_list = []
                 for th_idx, ThH in enumerate(HIGHS):
                     ThL = LOW_RATIO * ThH
                     bw = hysteresis_and_binary(nms, ThH, ThL)
                     bw_thin = thin(bw > 0).astype(np.uint8)
+                    bw_thin_list.append(bw_thin)
                     pcm_val = compute_pcm_binary(bw_thin, gt, g=G_PCM)
                     pcm_scores.append(pcm_val)
-                best_pcm = float(np.max(pcm_scores))
+                best_idx = int(np.nanargmax(pcm_scores)) if len(pcm_scores) > 0 else 0
+                best_pcm = float(np.max(pcm_scores)) if len(pcm_scores) > 0 else np.nan
                 results[t][msize].append(best_pcm)
+
+                # optionally save the best thin binary for this test/mask/mc
+                if save_outputs:
+                    try:
+                        best_bw = bw_thin_list[best_idx]
+                        images_out = os.path.join(out_dir, 'images')
+                        # save all thin binaries and mark the best one with a _best suffix
+                        for th_idx, bw_thin in enumerate(bw_thin_list):
+                            is_best = (th_idx == best_idx)
+                            what = f"bw_{t}_th{th_idx+1}"
+                            if is_best:
+                                what = what + "_best"
+                            saved = save_binary_image(bw_thin, images_out, what, image_path, attempt_num, n_mc, mc+1, msize)
+                            # log saved path for the best one to avoid too much console spam
+                            if is_best:
+                                print(f"            Saved best bw for test={t}, mask={msize}, mc={mc+1} -> {saved}")
+                    except Exception as e:
+                        print("            Failed to save binary image:", e)
 
     print("    Computing statistics...")
     summary_rows = []
@@ -145,4 +176,3 @@ def process_image(image_path, mask_sizes, n_mc=N_MC):
             })
     df = pd.DataFrame(summary_rows)
     return df, im, gt
-

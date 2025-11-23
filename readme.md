@@ -1,3 +1,10 @@
+
+Thesis title: "Combining information about tissue macro- and microstructure for efficient segmentation of retinal layers in OCT images"
+
+Author: Małgorzata Kufel
+
+---
+
 I'm a biomedical engineer who's currently attempting to finish their master's thesis after a health-related break. Joy.
 
 **Disclaimer**: the entirety of this code was written in ungodly hours of 11 PM - 5 AM usually since I do have a 9-5 and
@@ -193,4 +200,4 @@ Notes
 
 ![not joking](rambles_to_purge/gojo.png)
 
-Not even joking. If you recognize the art, shame on you (love the artist though, @_lildev__ on X). If you're my supervisor or the reviewer and reading this, please don't look them up.
+Not even joking. If you recognize the art, shame on you (love the artist though, `@_lildev__` on X). If you're my supervisor or the reviewer and reading this, please don't look them up.

@@ -17,6 +17,11 @@ try:
 except Exception:
     save_binary_image = None
 
+try:
+    from .saving import save_table
+except Exception:
+    save_table = None
+
 
 def process_image(image_path, mask_sizes, n_mc=N_MC, out_dir: str = None, attempt_num: int = None):
     """Process image and optionally save per-MC, per-mask best thin binaries when out_dir and attempt_num are provided.
@@ -24,6 +29,7 @@ def process_image(image_path, mask_sizes, n_mc=N_MC, out_dir: str = None, attemp
     Returns (df, im, gt) as before.
     """
     save_outputs = out_dir is not None and attempt_num is not None and save_binary_image is not None
+    save_tables = out_dir is not None and attempt_num is not None and save_table is not None
 
     print(f"  Loading image: {os.path.basename(image_path)}")
     im = load_gray(image_path)
@@ -175,4 +181,14 @@ def process_image(image_path, mask_sizes, n_mc=N_MC, out_dir: str = None, attemp
                 "pcm_std": std_pcm
             })
     df = pd.DataFrame(summary_rows)
+
+    # optionally save the results table for this image (mirrors demo/runner behavior)
+    if save_tables:
+        try:
+            tables_out_dir = os.path.join(out_dir, 'tables')
+            saved = save_table(df, tables_out_dir, 'results', image_path, attempt_num, n_mc)
+            print(f"    Saved results table to: {saved}")
+        except Exception as e:
+            print("    Failed to save results table:", e)
+
     return df, im, gt

@@ -10,8 +10,6 @@ from .layer import LayerItem
 from .image_utils import load_png_as_rgba, make_background_layer, fill_layer_with_gamma
 from .config import CANVAS_W, CANVAS_H, PNG_FILES, LAYER_NAMES, load_gamma_parameters
 
-# TODO make sure this works after refactor because if not i'm going to do a m
-
 class LayerEditorApp:
     def __init__(self, root: tk.Tk, layers: List[LayerItem], canvas_w: int, canvas_h: int):
         self.root = root
@@ -184,23 +182,62 @@ def main(run: bool = True, canvas_w: int = CANVAS_W, canvas_h: int = CANVAS_H, p
         print("Mismatch: PNG_FILES must correspond to all layers except background")
         return None
 
+    # Require gamma parameters to be present in json_outputs/gamma_parameters.json or project root.
     try:
         gamma_by_name = load_gamma_parameters()
-    except FileNotFoundError:
-        print("gamma_parameters.json not found")
+    except FileNotFoundError as e:
+        print("gamma_parameters.json not found in json_outputs/ or project root. Editor requires this file.")
+        return None
+    except Exception as e:
+        print(f"Error loading gamma parameters: {e}")
         return None
 
-    layers = []
+    # Use provided background gamma params; if missing, abort
+    if "background" not in gamma_by_name:
+        print("gamma_parameters.json missing 'background' entry; editor requires it")
+        return None
     bg_params = gamma_by_name["background"]
+
+    layers = []
     bg_layer = LayerItem("background", make_background_layer(bg_params["shape"], bg_params["scale"], canvas_w, canvas_h), init_y=0, draggable=False)
     layers.append(bg_layer)
 
+    # resolve project root so relative PNG paths are located correctly
+    project_root = Path(__file__).resolve().parents[1]
+
     for png_path, layer_name in zip(png_files, layer_names[1:]):
+        # Each non-background layer must have parameters; if missing, abort
+        if layer_name not in gamma_by_name:
+            print(f"gamma_parameters.json missing parameters for layer '{layer_name}'; editor requires full definitions")
+            return None
         params = gamma_by_name[layer_name]
-        img_rgba = load_png_as_rgba(png_path, target_width=canvas_w)
+
+        img_rgba = None
+        # Try multiple candidate locations for the PNG, in order:
+        # 1) the provided png_path as-is
+        # 2) project_root / png_path
+        # 3) project_root / 'pngs' / '<layer_name>.png'
+        candidates = [Path(png_path), project_root / png_path, project_root / "pngs" / f"{layer_name}.png"]
+        for cand in candidates:
+            try:
+                if cand.exists():
+                    img_rgba = load_png_as_rgba(str(cand), target_width=canvas_w)
+                    if cand != Path(png_path):
+                        print(f"Loaded PNG for {layer_name} from {cand}")
+                    break
+            except Exception:
+                img_rgba = None
+
+        if img_rgba is None:
+            print(f"Warning: could not load PNG for layer {layer_name} (checked {', '.join(str(c) for c in candidates)}); using transparent placeholder")
+            img_rgba = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
+
         layers.append(LayerItem(layer_name, img_rgba, init_y=0))
 
     app = LayerEditorApp(root, layers, canvas_w, canvas_h)
     if run:
-        root.mainloop()
+        try:
+            root.mainloop()
+        except Exception as e:
+            print("GUI failed to run:", e)
     return app

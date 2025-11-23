@@ -58,6 +58,10 @@ def process_image(image_path, mask_sizes, n_mc=N_MC, out_dir: str = None, attemp
             else:
                 angles = np.linspace(0, 180, 20, endpoint=False)
 
+            # Precompute masks for all angles for this mask size to avoid recomputing inside the pixel loop.
+            # make_dual_region_mask returns two boolean masks (A_mask, B_mask) of shape (msize, msize).
+            masks_per_angle = [make_dual_region_mask(msize, ang) for ang in angles]
+
             resp_maps = {t: np.zeros_like(im_mc, dtype=float) for t in tests}
             angle_map = np.full(im_mc.shape, np.nan)
             half = msize // 2
@@ -73,18 +77,23 @@ def process_image(image_path, mask_sizes, n_mc=N_MC, out_dir: str = None, attemp
                     best_vals = {t: -np.inf for t in tests}
                     best_angle = None
                     patch = im_mc[i - half:i + half + 1, j - half:j + half + 1]
-                    for ang in angles:
-                        A_mask, B_mask = make_dual_region_mask(msize, ang)
+
+                    # iterate over precomputed masks for each angle
+                    for ang_idx, ang in enumerate(angles):
+                        A_mask, B_mask = masks_per_angle[ang_idx]
                         A_vals = patch[A_mask]
                         B_vals = patch[B_mask]
                         stats_dict = compute_tests_region(A_vals, B_vals)
+                        # update bests for each test
                         for t in tests:
                             v = stats_dict[t]
                             if v > best_vals[t]:
                                 best_vals[t] = v
+                        # average response across tests to pick best angle
                         avg_resp = np.mean(list(stats_dict.values()))
                         if best_angle is None or avg_resp > best_angle[0]:
                             best_angle = (avg_resp, ang)
+
                     for t in tests:
                         resp_maps[t][i, j] = best_vals[t]
                     angle_map[i, j] = best_angle[1] if best_angle is not None else np.nan
@@ -182,7 +191,6 @@ def process_image(image_path, mask_sizes, n_mc=N_MC, out_dir: str = None, attemp
             })
     df = pd.DataFrame(summary_rows)
 
-    # optionally save the results table for this image (mirrors demo/runner behavior)
     if save_tables:
         try:
             tables_out_dir = os.path.join(out_dir, 'tables')

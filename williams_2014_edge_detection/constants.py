@@ -17,10 +17,10 @@ FILENAMES = [
     "7_ELM_OPR.png",
     "8_OPR_RPE.png",
 ]
-# mask sizes (use fuller set)
-MASK_SIZES = [5, 11, 15, 19]
-# Monte Carlo iterations (use value seen in later block)
-N_MC = 5
+# mask sizes
+MASK_SIZES = [15, 19]
+# Monte Carlo iterations
+N_MC = 3
 # PCM localization tolerance (pixels)
 G_PCM = 1
 # high thresholds swept in paper

@@ -1,6 +1,13 @@
+if __name__ == "__main__" and globals().get("__package__") is None:
+    import os, sys
+    # add project root (parent of this package dir) to sys.path so package imports work
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    # set package name so relative imports work when executed as a script
+    __package__ = "williams_2014_edge_detection"
+
 import os
 from PIL import Image
-from .constants import IMAGE_DIR, FILENAMES, MASK_SIZES, N_MC, DISPLAY, PROJECT_ROOT
+from .constants import IMAGE_DIR, FILENAMES, MASK_SIZES, N_MC, DISPLAY
 from .processing import process_image
 from .display import build_ks_binary_for_display, show_edge_on_black
 from .saving import make_attempt_dir, save_table

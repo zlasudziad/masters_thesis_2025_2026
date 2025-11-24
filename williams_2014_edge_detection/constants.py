@@ -20,7 +20,7 @@ FILENAMES = [
 # mask sizes
 MASK_SIZES = [15, 19]
 # Monte Carlo iterations
-N_MC = 3
+N_MC = 5
 # PCM localization tolerance (pixels)
 G_PCM = 1
 # high thresholds swept in paper

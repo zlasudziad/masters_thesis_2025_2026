@@ -78,7 +78,7 @@ def save_table(df, out_dir: str, base: str, source_path: str, attempt_num: int, 
     os.makedirs(out_dir, exist_ok=True)
     fname = format_table_filename(base, source_path, attempt_num, total_mc)
     out_path = os.path.join(out_dir, fname)
-    # let pandas handle writing
+
     try:
         df.to_csv(out_path, index=False)
     except Exception:

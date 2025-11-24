@@ -8,6 +8,12 @@ yeah, basically this.
 
 from positives, i contacted my supervisor to let him know i'm alive and working. 
 
+- next steps:
+    - [ ] fix the mc simulation. i discovered the depths of my own stupidity; i ran it on static images instead of regenerating them every time so the results are meaningless :)
+    - [ ] figure out better file naming conventions 
+    - [ ] maybe make the images smaller to speed up the simulations? i'm using 512x512 right now. a half that size might be enough
+
+[25/11/2025]
 
 [23/11/2025]
 - forgot to include saving the results for each case, not just the best one, for a set of monte carlo simulations that took about 15 hours to run. at least it works, though? see `attempt_01/images`. images are in a separate folder because there was supposed to be another one with tables like for `demo_001` but i forgot to save those :) pain
